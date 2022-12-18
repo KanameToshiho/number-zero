@@ -1,0 +1,245 @@
+<html>
+	<head>
+		<title>Number=>0</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
+		<meta charset="UTF-8">
+	</head>
+	<body>
+	<canvas id="can"></canvas>
+	<H2 class="inner" id="scoretag"></H2>
+	<div class="inner">
+	<button onclick="location.reload();">もう一度プレイ</button>
+	</div>
+	<ul id="ranking" />
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI" crossorigin="anonymous"></script>
+	<script>//スクロール禁止
+function gomi(){
+function disableScroll(event) {
+  event.preventDefault();
+}
+document.addEventListener('touchmove', disableScroll, { passive: false });
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+function drawres(res,cxx) {
+  var fontSize = window.innerWidth/3 ;
+  cxx.beginPath () ;
+  cxx.font = "bold " + fontSize + "px Arial, meiryo, sans-serif" ;
+  var mesure = cxx.measureText( res );
+  var textWidth = mesure.width ;
+  var textHeight = mesure.actualBoundingBoxAscent + mesure.actualBoundingBoxDescent;
+  cxx.fillStyle = "#FFA500";
+  cxx.fillRect(0,0,window.innerWidth, window.innerHeight/3);
+  cxx.fillStyle = "#FFFFFF";
+  cxx.fillText( res, (window.innerWidth - textWidth) / 2, window.innerHeight/6 + textHeight/2) ;
+  cxx.fillStyle = "#000000";
+}
+function drawsec(o,sec,cxx,x,y) {
+  var fontSize = window.innerWidth/14*2;
+  cxx.beginPath () ;
+  if (o==0){var ref = "÷";}else{var ref = "-";}
+  cxx.font = "bold " + fontSize + "px Arial, meiryo, sans-serif" ;
+  var mesure = cxx.measureText( ref + sec );
+  var textWidth = mesure.width ;
+  var textHeight = mesure.actualBoundingBoxAscent + mesure.actualBoundingBoxDescent;
+  cxx.fillText( ref+sec , x-textWidth/2,y);
+  Th = textHeight;
+}
+const dif = 4;//難易度調節用。詳しくは17行目のforを参照
+var hold = new Array(2);
+var cle = new Array(4);
+var rh = new Array(4);
+var onl = 0;
+var score = -1;
+var time = 60;
+var recflag = 1;
+for (var i=0;i<4;i++){
+	re=1;
+	while(re)
+	{
+		re=0;
+		mn=getRandomInt(4);
+		for(var kk = 0;kk<i;kk++){
+			if(mn==rh[kk]){re=1;}
+		}
+	}
+	rh[i]=mn;
+}
+//初期化
+window.addEventListener('DOMContentLoaded', (event) => {
+  ca = document.getElementById("can");
+  cx = ca.getContext("2d");
+  ca.width = window.innerWidth;
+  ca.height = window.innerHeight;
+  //画像読み込み
+  bimage = new Image();
+  bimage.src = "https://cdn.glitch.global/3cd07674-af1b-48c7-af0c-30994d9c73fc/reload.png?v=1651247286976"
+  bimage.onload = () =>{
+	iw = window.innerHeight/14*3;
+	ih = iw;
+    cx.drawImage(bimage,window.innerWidth/2-iw/2,window.innerHeight/3+window.innerWidth/7*3-iw/2,iw,ih);
+	onl = 1;
+  }
+  num = new Array(10);num_ = new Array(10)
+  //num:*/(0) or +=(1) // num_:number
+  varinit();
+  ca.addEventListener('touchstart', ts);
+  function ts(event) {  
+  if (time !=0){
+    var secc = Math.floor(event.changedTouches[0].pageX*dif/window.innerWidth);
+	var orse = Math.pow((event.changedTouches[0].pageY-py+Th/2),2);
+	if (orse<=4000){orse=1;}else{orse=0;}
+	hold[0] = orse; //つかんでいるか
+	hold[1] = rh[3-secc]; //つかんでいるとしたらどれなのか
+	if(num[hold[1]]==2){hold[0]=0;}
+	
+  }
+  }
+  ca.addEventListener('touchmove', tm);
+  function tm(event) {
+  if (hold[0]==1 && cle[hold[1]]!=1 && time!=0){
+	hn = hold[1];
+    draw();
+	var e = event.changedTouches[0];
+	
+	drawsec(num[hn],num_[hn],cx,e.pageX,e.pageY);
+  }
+  }
+  ca.addEventListener('touchend', te);
+  function te(event){
+	var e = event.changedTouches[0];
+	if (time != 0 && e.pageY<=window.innerHeight/3 && hold[0]==1  && cle[hold[1]]!=1){if(num[hold[1]]==1){res-=num_[hold[1]];}else{res=res/num_[hold[1]];};cle[hold[1]]=1;}
+	if (e.pageY>=window.innerHeight/3+window.innerWidth/7*3-iw/2 && e.pageY<=window.innerHeight/3+window.innerWidth/7*3+iw/2 && time!=0){reset1();}
+	draw();
+  }
+  id = setInterval(count,1000);
+});
+function draw() {
+  cx.fillStyle = "#FFFFFF";
+  cx.fillRect(0,0,window.innerWidth,window.innerHeight);
+  drawres(res,cx);
+  py = window.innerHeight/3+window.innerWidth/7;
+  px = window.innerWidth/2;
+  for (var i = 0;i<dif;i++){
+	mi = rh[i];
+	var the = Math.random()*Math.PI;
+	if(cle[mi]!=1){
+      drawsec(num[mi],num_[mi],cx,px-((i+1)-(dif+1)/2)*window.innerWidth/4,py);
+	}
+  }
+  if (onl){
+    cx.drawImage(bimage,window.innerWidth/2-iw/2,window.innerHeight/3+window.innerWidth/7*3-iw/2,iw,ih);
+  }
+  var fontSize = window.innerWidth/9 ;
+  cx.beginPath () ;
+  cx.font = "bold " + fontSize + "px Arial, meiryo, sans-serif" ;
+  var mesure = cx.measureText( "Your score:"+score );
+  var textWidth = mesure.width ;
+  cx.fillStyle = "#000000";
+  cx.fillText( "Your score:"+score, (window.innerWidth - textWidth) / 2, window.innerHeight-30 ) ;
+  if(res==0){varinit();}
+  var fontSize = window.innerWidth/9 ;
+  cx.beginPath () ;
+  cx.font = "bold " + fontSize + "px Arial, meiryo, sans-serif" ;
+  var mesure = cx.measureText( "残り時間:"+time );
+  var textWidth = mesure.width ;
+  cx.fillStyle = "#000000";
+  cx.fillText( "残り時間:"+time, (window.innerWidth - textWidth) / 2, window.innerHeight-fontSize*2 ) ;
+}
+//reloadボタンの時
+function reset1(){
+  cle[0]=0;cle[1]=0;cle[2]=0;cle[3]=0;
+  res=resc;
+}
+function varinit() {
+  score++;
+  num[0] = 1;
+  res = 0 ;//結果
+  for(var i=0;i<dif;i++)
+  {
+	  num_[i] = getRandomInt(10)+1;
+	  if(num[i]==0){res = res * num_[i];} else {res += num_[i];}
+	  num[i+1] = getRandomInt(2);
+  }
+  cle[0]=0;cle[1]=0;cle[2]=0;cle[3]=0;
+  resc = res;
+  setTimeout(draw,300);
+}
+function count() {
+  time--;
+  draw();
+  var fontSize = window.innerWidth/9 ;
+  cx.beginPath () ;
+  cx.font = "bold " + fontSize + "px Arial, meiryo, sans-serif" ;
+  var mesure = cx.measureText( "残り時間:"+time );
+  var textWidth = mesure.width ;
+  cx.fillStyle = "#000000";
+  cx.fillText( "残り時間:"+time, (window.innerWidth - textWidth) / 2, window.innerHeight-fontSize*2 ) ;
+  if (time==0){clearInterval(id);timeup();}
+}
+function timeup() {
+	ca.height=0;
+	h_ = document.getElementById("scoretag");
+	h_.innerText="あなたのスコアは"+score+"です。"
+  
+        const socket=io("https://number-zero.glitch.me", {
+	  "force new connection" : true,
+	  "reconnectionAttempts": "Infinity",
+	  "transports" : ["websocket"]
+  });
+      user = window.prompt("ニックネームを入力してください", "");
+      if (user==null){user='名無し';}
+      //  'receiveMessage' イベントの発火を検知
+      //  第一引数には受信したメッセージが入る
+      socket.on('receiveMessage', (message) => {
+        if (recflag){
+        // 受信したメッセージをulタグに挿入
+        scores = (message);
+        scores_ = scores.split(",");
+        
+        myrank = 5;
+        for (var i=9;i>=0;i-=2){
+          if(score>=scores_[i]){myrank=(i+1)/2-1;}
+        }
+        refres = "";
+        erefres = "";
+        pflag=0;
+        for (var i=0;i<10;i+=2){
+          erefres = scores_[i-pflag] + "," + scores_[i+1-pflag] + ",";
+          if (myrank==i/2){erefres = user + "," + score + ",";pflag=2;}
+          refres += erefres;
+        }
+        ref__ = refres.split(",");
+        var list = document.getElementById('ranking');
+        for(var i=0;i<ref__.length-1;i+=2){
+          var li = document.createElement('li');
+          li.innerHTML = (i/2+1)+"位:"+ref__[i]+":"+ref__[i+1];;
+          list.appendChild(li);
+        }
+        socket.emit('sendMessage',refres);
+        recflag=0;
+        }
+      });
+}
+}
+    gomi();</script>
+	<style>
+	body {
+	 margin:0px;
+	}
+	html,body{
+     overflow: hidden
+	}
+	.inner{
+	  text-align: center;
+	}
+	.inner{
+	  width: 80%;
+	  margin: 0 auto;
+	  max-width: 500px;
+	}
+    li {
+      margin:0px;
+    }
+	</style>
+</html>
